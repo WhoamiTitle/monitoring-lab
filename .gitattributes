@@ -1,0 +1,6 @@
+# Keep configuration files and documentation portable across operating systems.
+* text=auto eol=lf
+
+# Dashboard preview images are binary files.
+*.jpg binary
+*.png binary

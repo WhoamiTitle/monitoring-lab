@@ -1,0 +1,27 @@
+# macOS and Windows metadata
+.DS_Store
+._*
+Thumbs.db
+Desktop.ini
+
+# Local editor settings and temporary files
+.idea/
+.vscode/
+*~
+*.swp
+*.swo
+
+# Local environment files; example templates may be committed
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# Local study materials
+/docs/
+
+# Local runtime data and logs
+*.log
+/prometheus-data/
+/grafana-data/
+/tmp/

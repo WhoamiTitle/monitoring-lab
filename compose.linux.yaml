@@ -1,0 +1,30 @@
+# Дополнение для обычного Docker Engine на Linux.
+services:
+  cadvisor:
+    image: ghcr.io/google/cadvisor:0.60.6
+    privileged: true
+    devices:
+      - /dev/kmsg:/dev/kmsg
+    command:
+      - --docker_only=true
+      - --housekeeping_interval=5s
+      - --store_container_labels=false
+      - --whitelisted_container_labels=monitoring_demo
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
+      - /dev/disk:/dev/disk:ro
+
+  prometheus:
+    volumes:
+      - ./prometheus/cadvisor.yml:/etc/prometheus/scrape.d/cadvisor.yml:ro
+    depends_on:
+      - cadvisor
+
+  grafana:
+    volumes:
+      - ./grafana/dashboards/resources.json:/etc/grafana/demo-dashboards/resources.json:ro
