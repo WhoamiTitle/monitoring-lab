@@ -27,6 +27,7 @@ services:
       - grafana-data:/var/lib/grafana
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
       - ./grafana/dashboards/availability.json:/etc/grafana/demo-dashboards/availability.json:ro
+      - ./grafana/dashboards/golden-signals.json:/etc/grafana/demo-dashboards/golden-signals.json:ro
     depends_on:
       - prometheus
 
@@ -38,7 +39,10 @@ services:
       - ./blackbox/blackbox.yml:/etc/blackbox/blackbox.yml:ro
 
   web-1:
-    image: nginx:1.28-alpine
+    image: monitoring-lab-web:local
+    build: ./web
+    init: true
+    cgroup: private
     labels:
       monitoring_demo: web-1
     ports:
@@ -49,7 +53,10 @@ services:
     cpus: 1.0
 
   web-2:
-    image: nginx:1.28-alpine
+    image: monitoring-lab-web:local
+    build: ./web
+    init: true
+    cgroup: private
     labels:
       monitoring_demo: web-2
     ports:

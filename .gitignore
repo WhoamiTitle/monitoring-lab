@@ -11,6 +11,10 @@ Desktop.ini
 *.swp
 *.swo
 
+# Python cache for the demo exporter and tests
+__pycache__/
+*.py[cod]
+
 # Local environment files; example templates may be committed
 .env
 .env.*

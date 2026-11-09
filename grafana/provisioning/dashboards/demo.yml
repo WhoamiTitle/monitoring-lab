@@ -5,7 +5,9 @@ providers:
     folder: Monitoring Demo
     type: file
     disableDeletion: false
-    updateIntervalSeconds: 10
+    # Docker Desktop не всегда передаёт события изменений bind mount.
+    # Интервал больше 10 включает периодический опрос файлов.
+    updateIntervalSeconds: 15
     allowUiUpdates: true
     options:
       path: /etc/grafana/demo-dashboards

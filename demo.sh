@@ -12,6 +12,8 @@ usage() {
   memory   занять 32 MiB в /dev/shm, по умолчанию на 30 секунд
   disk     записать 16 MiB в /tmp, по умолчанию на 30 секунд
   traffic  дополнительные HTTP-запросы, по умолчанию 20 секунд
+  slow     запросы с задержкой примерно 0,8 с, по умолчанию 20 секунд
+  errors   ответы HTTP 500, по умолчанию 20 секунд
 
 Также можно использовать имена ram и network вместо memory и traffic.
 Длительность задаётся целым числом от 1 до 120 секунд.
@@ -20,9 +22,11 @@ usage() {
   ./demo.sh cpu web-1
   ./demo.sh memory web-2 45
   ./demo.sh traffic web-1 30
+  ./demo.sh slow web-1 30
+  ./demo.sh errors web-2 30
 
 Выбранный web-контейнер должен быть запущен. Временные файлы удаляются
-после завершения сценария. Для traffic используется временный контейнер load.
+после завершения сценария. Для traffic, slow и errors используется временный контейнер load.
 Для досрочной остановки сценария нажми Ctrl+C.
 EOF
 }
@@ -50,7 +54,8 @@ case "$scenario" in
     memory|ram) scenario=memory; default_seconds=30 ;;
     disk) default_seconds=30 ;;
     traffic|network) scenario=traffic; default_seconds=20 ;;
-    *) fail 'Выбери сценарий: cpu, memory, disk или traffic.' ;;
+    slow|errors) default_seconds=20 ;;
+    *) fail 'Выбери сценарий: cpu, memory, disk, traffic, slow или errors.' ;;
 esac
 
 case "$service" in
@@ -179,7 +184,12 @@ case "$scenario" in
             cancel_container_work "$status"
         fi
         ;;
-    traffic)
+    traffic|slow|errors)
+        case "$scenario" in
+            traffic) path=/; expected=ok ;;
+            slow) path=/__demo/slow; expected=ok ;;
+            errors) path=/__demo/error; expected=500 ;;
+        esac
         # Уникальное имя и метка позволяют остановить только созданный нами клиент.
         traffic_dir=$(mktemp -d "${TMPDIR:-/tmp}/monitoring-lab-traffic.XXXXXX")
         traffic_token="${traffic_dir##*.}-$$"
@@ -208,17 +218,28 @@ case "$scenario" in
             --entrypoint /bin/sh load -eu -c '
                 target=$1
                 end_time=$(( $(date +%s) + $2 + 1 ))
+                expected=$3
                 requests=0
                 while [ "$(date +%s)" -lt "$end_time" ]; do
-                    if ! wget -q -T 2 -O /dev/null "$target"; then
+                    if [ "$expected" = 500 ]; then
+                        if result=$(wget -S -T 2 -O /dev/null "$target" 2>&1); then
+                            printf "Ожидался HTTP 500, получен успешный ответ.\n" >&2
+                            exit 1
+                        else
+                            case "$result" in
+                                *"HTTP/1.1 500"*|*"HTTP/1.0 500"*) ;;
+                                *) printf "Ожидался HTTP 500; ошибка запроса: %s\n" "$result" >&2; exit 1 ;;
+                            esac
+                        fi
+                    elif ! wget -q -T 2 -O /dev/null "$target"; then
                         printf "Не удалось получить HTTP-ответ от %s.\n" "$target" >&2
                         exit 1
                     fi
                     requests=$((requests + 1))
                     sleep 0.01
                 done
-                printf "Успешных HTTP-запросов: %s\n" "$requests"
-            ' demo "http://$service:80/" "$duration_seconds"; then
+                printf "Завершённых запросов (ожидаемый ответ %s): %s\n" "$expected" "$requests"
+            ' demo "http://$service:80$path" "$duration_seconds" "$expected"; then
             trap - INT TERM
             rmdir "$traffic_dir" 2>/dev/null || :
         else

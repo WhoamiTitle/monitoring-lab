@@ -15,6 +15,15 @@ scrape_configs:
     static_configs:
       - targets: ["blackbox:9115"]
 
+  - job_name: web-metrics
+    static_configs:
+      - targets: ["web-1:9117"]
+        labels:
+          service: web-1
+      - targets: ["web-2:9117"]
+        labels:
+          service: web-2
+
   - job_name: web-http
     metrics_path: /probe
     params:
